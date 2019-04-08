@@ -42,17 +42,17 @@ class LoomDataset(GeneExpressionDataset):
 
     def preprocess(self):
         print(f"Preprocessing dataset: {self.download_name}")
-        gene_names, labels, batch_indices, cell_types = None, None, None, None
+        gene_names, labels, batch_indices, cell_types, ethnicity_labels, organ_labels = None, None, None, None, None, None
         ds = loompy.connect(os.path.join(self.save_path, self.download_name))
         select = ds[:, :].sum(axis=0) > 0  # Take out cells that doesn't express any gene
 
-        if 'Gene' in ds.ra:
+        if 'var_names' in ds.ra:
             print("Extracting gene information from dataset")
-            gene_names = ds.ra['Gene']
+            gene_names = ds.ra['var_names']
 
-        if 'short_name' in ds.ca:
+        if 'age' in ds.ca:
             print("Extracting batch information from dataset")
-            batch_indices = ds.ca['short_name']
+            batch_indices = ds.ca['age']
             batch_indices = np.reshape(batch_indices, (batch_indices.shape[0], 1))[select]
 
         if 'ethnicity_label' in ds.ca:
@@ -65,21 +65,22 @@ class LoomDataset(GeneExpressionDataset):
             labels = np.array(ds.ca['ClusterID'])
             labels = np.reshape(labels, (labels.shape[0], 1))[select]
 
-        if 'organ_label' in ds.ca:
+        if 'tissue' in ds.ca:
             print("Extracting organ information from dataset")
-            organ_labels = ds.ca['organ_label']
+            organ_labels = ds.ca['tissue']
             organ_labels = np.reshape(organ_labels, (organ_labels.shape[0], 1))[select]
 
-        if 'CellTypes' in ds.attrs:
+        if 'cell_ontology_class' in ds.ca:
             print("Extracting cell type information from dataset")
-            cell_types = np.array(ds.attrs['CellTypes'])
+            cell_types = ds.ca['cell_ontology_class']
+            cell_types = np.reshape(cell_types, (cell_types.shape[0], 1))[select]
 
         data = ds[:, select].T  # change matrix to cells by genes
         print(f"Final matrix shape is: {data.shape}")
         ds.close()
 
         print("Finished preprocessing dataset")
-        return data, batch_indices, ethnicity_labels, organ_labels, labels, gene_names, cell_types
+        return data, batch_indices, ethnicity_labels, organ_labels, cell_types, gene_names, np.unique(cell_types)
 
 
 class RetinaDataset(LoomDataset):

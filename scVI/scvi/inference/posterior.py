@@ -1,25 +1,22 @@
-from abc import abstractmethod
 import copy
+import os
+from abc import abstractmethod
 
 import numpy as np
 import pandas as pd
 import scipy
 import torch
-import os
 from matplotlib import pyplot as plt
 from scipy.stats import kde, entropy
+from scvi.models.log_likelihood import compute_log_likelihood, compute_marginal_log_likelihood
 from sklearn.cluster import KMeans
 from sklearn.manifold import TSNE
-from sklearn.metrics import adjusted_rand_score as ARI
-from sklearn.metrics import normalized_mutual_info_score as NMI
-from sklearn.metrics import silhouette_score
+from sklearn.metrics import adjusted_rand_score as ARI, normalized_mutual_info_score as NMI, silhouette_score
 from sklearn.mixture import GaussianMixture as GMM
 from sklearn.neighbors import NearestNeighbors, KNeighborsRegressor
 from sklearn.utils.linear_assignment_ import linear_assignment
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SequentialSampler, SubsetRandomSampler, RandomSampler
-
-from scvi.models.log_likelihood import compute_log_likelihood, compute_marginal_log_likelihood
 
 
 class SequentialSubsetSampler(SubsetRandomSampler):
@@ -145,8 +142,9 @@ class Posterior:
         latent = []
         batch_indices = []
         labels = []
+        tissue_labels = []
         for tensors in self:
-            sample_batch, local_l_mean, local_l_var, batch_index, label = tensors
+            sample_batch, local_l_mean, local_l_var, batch_index, label, tissue = tensors
             if not sample:
                 if self.model.log_variational:
                     sample_batch = torch.log(1 + sample_batch)
@@ -155,7 +153,9 @@ class Posterior:
                 latent += [self.model.sample_from_posterior_z(sample_batch).cpu()]
             batch_indices += [batch_index.cpu()]
             labels += [label.cpu()]
-        return np.array(torch.cat(latent)), np.array(torch.cat(batch_indices)), np.array(torch.cat(labels)).ravel()
+            tissue_labels += [tissue.cpu()]
+        return np.array(torch.cat(latent)), np.array(torch.cat(batch_indices)), np.array(
+            torch.cat(labels)).ravel(), np.array(torch.cat(tissue_labels)).ravel()
 
     @torch.no_grad()
     def entropy_batch_mixing(self, verbose=False, **kwargs):
@@ -261,7 +261,7 @@ class Posterior:
             res = res.sort_values(by=['bayes1'], ascending=False)
             return res
         else:
-            return(bayes1)
+            return (bayes1)
 
     @torch.no_grad()
     def one_vs_all_degenes(self, subset=None, cell_labels=None, min_cells=10,
@@ -547,13 +547,14 @@ class Posterior:
 
     @torch.no_grad()
     def show_t_sne(self, n_samples=1000, color_by='', save_name='', latent=None, batch_indices=None,
-                   labels=None, n_batch=None):
+                   labels=None, tissue_labels=None, n_batch=None):
         # If no latent representation is given
         if latent is None:
-            latent, batch_indices, labels = self.get_latent(sample=True)
+            latent, batch_indices, labels, tissue_labels = self.get_latent(sample=True)
             latent, idx_t_sne = self.apply_t_sne(latent, n_samples)
             batch_indices = batch_indices[idx_t_sne].ravel()
             labels = labels[idx_t_sne].ravel()
+            tissue_labels = tissue_labels[idx_t_sne].ravel()
         if not color_by:
             plt.figure(figsize=(10, 10))
             plt.scatter(latent[:, 0], latent[:, 1])
@@ -575,7 +576,8 @@ class Posterior:
                     plt.scatter(latent[indices == i, 0], latent[indices == i, 1], label=label)
                 plt.legend()
             elif color_by == 'batches and labels':
-                fig, axes = plt.subplots(1, 2, figsize=(14, 7))
+                fig, axes = plt.subplots(2, 2, figsize=(14, 7))
+                axes = axes.flatten()
                 batch_indices = batch_indices.ravel()
                 for i in range(n_batch):
                     axes[0].scatter(latent[batch_indices == i, 0], latent[batch_indices == i, 1], label=str(i))
@@ -593,6 +595,18 @@ class Posterior:
                 axes[1].set_title("label coloring")
                 axes[1].axis("off")
                 axes[1].legend()
+
+                tissue_indices = tissue_labels.ravel()
+                if hasattr(self.gene_dataset, 'organ_labels'):
+                    tissue_plt_labels = self.gene_dataset.organ_labels
+                else:
+                    tissue_plt_labels = [str(i) for i in range(len(np.unique(tissue_indices)))]
+                for i, tissue in zip(range(self.gene_dataset.n_organ_labels), tissue_plt_labels):
+                    axes[2].scatter(latent[tissue_indices == i, 0], latent[tissue_indices == i, 1], label=tissue)
+                axes[2].set_title("tissue coloring")
+                axes[2].axis("off")
+                axes[2].legend()
+
         plt.axis("off")
         plt.tight_layout()
         if save_name:
@@ -635,7 +649,7 @@ def entropy_batch_mixing(latent_space, batches, n_neighbors=50, n_pools=50, n_sa
     for t in range(n_pools):
         indices = np.random.choice(np.arange(latent_space.shape[0]), size=n_samples_per_pool)
         score += np.mean([entropy(batches[kmatrix[indices].nonzero()[1]
-                                                 [kmatrix[indices].nonzero()[0] == i]])
+        [kmatrix[indices].nonzero()[0] == i]])
                           for i in range(n_samples_per_pool)])
     return score / float(n_pools)
 

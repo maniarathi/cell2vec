@@ -31,17 +31,16 @@ class UnsupervisedTrainer(Trainer):
     def __init__(self, model, gene_dataset, train_size=0.8, test_size=None, kl=None, **kwargs):
         super().__init__(model, gene_dataset, **kwargs)
         self.kl = kl
-        if type(self) is UnsupervisedTrainer:
-            self.train_set, self.test_set = self.train_test(model, gene_dataset, train_size, test_size)
-            self.train_set.to_monitor = ['ll']
-            self.test_set.to_monitor = ['ll']
+        self.train_set, self.test_set = self.train_test(model, gene_dataset, train_size, test_size)
+        self.train_set.to_monitor = ['ll']
+        self.test_set.to_monitor = ['ll']
 
     @property
     def posteriors_loop(self):
         return ['train_set']
 
     def loss(self, tensors):
-        sample_batch, local_l_mean, local_l_var, batch_index, _ = tensors
+        sample_batch, local_l_mean, local_l_var, batch_index, _, _ = tensors
         reconst_loss, kl_divergence = self.model(sample_batch, local_l_mean, local_l_var, batch_index)
         loss = torch.mean(reconst_loss + self.kl_weight * kl_divergence)
         return loss

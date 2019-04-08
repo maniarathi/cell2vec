@@ -35,6 +35,8 @@ class GeneExpressionDataset(Dataset):
         self.batch_indices, self.n_batches = arrange_categories(batch_indices)
         self.labels, self.n_labels = arrange_categories(labels)
         self.ethnicity_labels, self.n_ethnicity_labels = arrange_categories(ethnicity_labels)
+        if organ_labels is not None:
+            self.organ_types = np.array(np.unique(organ_labels), dtype=np.str)
         self.organ_labels, self.n_organ_labels = arrange_categories(organ_labels)
         self.x_coord, self.y_coord = x_coord, y_coord
         self.norm_X = None
@@ -115,7 +117,8 @@ class GeneExpressionDataset(Dataset):
             return X, torch.FloatTensor(self.local_means[indexes]), \
                    torch.FloatTensor(self.local_vars[indexes]), \
                    torch.LongTensor(self.batch_indices[indexes]), \
-                   torch.LongTensor(self.labels[indexes])
+                   torch.LongTensor(self.labels[indexes]), \
+                   torch.LongTensor(self.organ_labels[indexes])
         else:
             return X, torch.FloatTensor(self.local_means[indexes]), \
                    torch.FloatTensor(self.local_vars[indexes]), \
