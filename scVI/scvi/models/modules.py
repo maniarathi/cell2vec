@@ -5,7 +5,7 @@ import torch
 from torch import nn as nn
 from torch.distributions import Normal
 
-from scvi.models.utils import one_hot
+from .utils import one_hot
 
 
 class FCLayers(nn.Module):

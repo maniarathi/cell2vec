@@ -8,7 +8,6 @@ import scipy
 import torch
 from matplotlib import pyplot as plt
 from scipy.stats import kde, entropy
-from scvi.models.log_likelihood import compute_log_likelihood, compute_marginal_log_likelihood
 from sklearn.cluster import KMeans
 from sklearn.manifold import TSNE
 from sklearn.metrics import adjusted_rand_score as ARI, normalized_mutual_info_score as NMI, silhouette_score
@@ -17,6 +16,8 @@ from sklearn.neighbors import NearestNeighbors, KNeighborsRegressor
 from sklearn.utils.linear_assignment_ import linear_assignment
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SequentialSampler, SubsetRandomSampler, RandomSampler
+
+from ..models.log_likelihood import compute_log_likelihood, compute_marginal_log_likelihood
 
 
 class SequentialSubsetSampler(SubsetRandomSampler):

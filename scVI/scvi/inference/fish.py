@@ -2,10 +2,10 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from scvi.inference import Posterior
-from scvi.inference import Trainer
-from scvi.models.classifier import Classifier
-from scvi.models.log_likelihood import compute_log_likelihood
+from .inference import Trainer
+from .posterior import Posterior
+from ..models.classifier import Classifier
+from ..models.log_likelihood import compute_log_likelihood
 
 
 class FishPosterior(Posterior):
