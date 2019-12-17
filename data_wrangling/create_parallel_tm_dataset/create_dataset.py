@@ -47,3 +47,11 @@ class ParallelTMDatasetCreator:
                 print(f'Column names are {", ".join(row)}')
                 read_column_names = True
         pass
+
+class CreateMacaSubset:
+    def __init__(self, gender=['m', 'f'], organs=['bladder'], tech=['10x', 'ss2']):
+        self.gender = gender
+        self.organs = organs
+        self.tech = tech
+
+        self.file =
