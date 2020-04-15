@@ -1,3 +1,4 @@
 anndata
-scanpy
-scvi
+loompy
+torch
+urllib
