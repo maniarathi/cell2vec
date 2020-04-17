@@ -1,6 +1,6 @@
 anndata
 loompy
+requests
 scanpy
 scvi
 torch
-urllib
